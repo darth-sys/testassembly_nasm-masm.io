@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Тест по ассемблерам</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #87CEEB 0%, #FFFACD 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Фоновая картинка Dash */
+        .background-dash {
+            position: absolute;
+            left: 43px; /* Отступ слева */
+            bottom: 1000px; /* Отступ снизу */
+            width: 180px; /* Размер как у Fluttershy */
+            height: 100px;
+            z-index: 0; /* Позади контента */
+            pointer-events: none;
+            animation: gentle-sway 6s infinite ease-in-out;
+        }
+
+        /* Анимация покачивания */
+        @keyframes gentle-sway {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(-6deg); }
+        }
+
+        .quiz-container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+            width: 520px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            z-index: 1; /* Поверх фона */
+        }
+
+        .question-box {
+            display: none;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+        .question-box.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .fluttershy-corner {
+          position: absolute;
+            top: -10px;
+            left: 360px;
+            width: 160px;
+            height: 120px;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .options label {
+            display: block;
+            margin: 12px 0;
+            padding: 14px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        .options label.selected {
+            background-color: #f0f8ff;
+            border-color: #4CAF50;
+        }
+
+        button {
+            margin-top: 30px;
+            padding: 14px 40px;
+            font-size: 16px;
+            border-radius: 12px;
+            border: none;
+        }
+        .submit-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .submit-btn.disabled {
+            background-color: #b2dfdb;
+        }
+
+        .result-box {
+             margin-top: 40px;
+             padding-top: 30px;
+             border-top: 2px solid #ddd;
+             opacity: 0;
+             transform: translateY(50px);
+             transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+         }
+         .result-box.show {
+             opacity: 1;
+             transform: translateY(0);
+         }
+         .summary-item.correct {
+             color: #2e7d32;
+         }
+         .summary-item.wrong {
+             color: #c62828;
+         }
+
+         .emotion-block {
+             margin-top: 35px;
+             text-align: center;
+         }
+    </style>
+</head>
+<body>
+
+<!-- Фоновая картинка Dash -->
+<img src="images/Dash.png" alt="Dash" class="background-dash">
+
+<div class="quiz-container">
+    <img src="images/Fluttershy.gif" alt="Fluttershy" class="fluttershy-corner">
+    
+    <div id="quiz"></div>
+    <div class="result-box" id="result" style="display:none;">
+        <h2 id="final-message"></h2>
+        <p>Ваш результат: <span id="score-percent"></span>%</p>
+        
+        <div class="emotion-block" id="emotion-block"></div>
+        
+        <h3>Разбор ответов:</h3>
+        <ul id="summary-list"></ul>
+    </div>
+</div>
+
+<script>
+    // --- НОВЫЕ ВОПРОСЫ ---
+    const questions = [
+        {
+            question: "Какой язык программирования является языком низкого уровня?",
+            options: ["Ассемблер", "Python", "JavaScript", "C#"],
+            answerIndex: 0,
+            correctAnswerText: "Ассемблер"
+        },
+        {
+            question: "В каком году появился MASM?",
+            options: ["1991", "1981", "1970", "2000"],
+            answerIndex: 0,
+            correctAnswerText: "1981"
+        },
+        {
+            question: "Кто разработал NASM?",
+            options: ["Билл Гейтс", "Линус Торвальдс", "Марк Цукерберг", "Сеймон Тео и Юлий Холл"],
+            answerIndex: 0,
+            correctAnswerText: "Сеймон Тео и Юлий Холл"
+        },
+        {
+            question: "Лучшая пони?",
+            options: [ "Флаттершай", "Принцесса БигМак", "Луна", "У каждого своя лучшая пони"],
+            answerIndex: 0,
+            correctAnswerText: "У каждого своя лучшая пони"
+        },
+        {
+            question: "Какой синтаксис использует MASM?",
+            options: [ "AT&T", "Pascal", "Intel", "BASIC"],
+            answerIndex: 0,
+            correctAnswerText: "Intel"
+        },
+        {
+            question: "Какой ассемблер имеет свободную лицензию?",
+            options: ["NASM", "MASM", "FASM", "Никакой"],
+            answerIndex: 0,
+            correctAnswerText: "NASM"
+        },
+        {
+            question: "На какой платформе ориентирован MASM?",
+            options: [ "Linux", "macOS", "Windows", "Android"],
+            answerIndex: 0,
+            correctAnswerText: "Windows"
+        },
+        {
+            question: "Какой ассемблер поддерживает оба синтаксиса (Intel и AT&T)?",
+            options: ["NASM", "MASM", "FASM", "I don't know"],
+            answerIndex: 0,
+            correctAnswerText: "NASM"
+        },
+        {
+            question: "Какой недостаток у MASM?",
+            options: [ "Нет поддержки Windows", "Медленная работа" , "Требует коммерческой лицензии", "Сложная установка"],
+            answerIndex: 0,
+            correctAnswerText: "Требует коммерческой лицензии"
+        },
+        {
+            question: "Какой недостаток у NASM?",
+            options: ["Отсутствие автоматической оптимизации размеров операндов", "Высокая стоимость", "Ограниченная совместимость", "Низкая скорость компиляции"],
+            answerIndex: 0,
+            correctAnswerText: "Отсутствие автоматической оптимизации размеров операндов"
+        },
+        {
+            question: "Где чаще всего применяется MASM?",
+            options: [ "Образовательные проекты", "Корпоративные проекты Windows", "Игровая индустрия", "Веб-разработка"],
+            answerIndex: 0,
+            correctAnswerText: "Корпоративные проекты Windows"
+        },
+        {
+            question: "Какой ассемблер рекомендуется для кросс-платформенных проектов?",
+            options: ["NASM", "MASM", "FASM", "TASM"],
+            answerIndex: 0,
+            correctAnswerText: "NASM"
+        },
+        {
+            question: "Какой фактор влияет на выбор между MASM и NASM?",
+            options: ["Скорость загрузки компьютера", "Платформа и задачи проекта", "Цвет иконки программы", "Язык документации"],
+            answerIndex: 0,
+            correctAnswerText: "Платформа и задачи проекта"
+        }
+    ];
+
+
+    let currentQuestion = 0,
+      score = 0,
+      userAnswers = [],
+      selectedOption = null,
+      quizEl = document.getElementById("quiz"),
+      resultEl = document.getElementById("result"),
+      finalMessageEl = document.getElementById("final-message"),
+      scorePercentEl = document.getElementById("score-percent"),
+      summaryListEl = document.getElementById("summary-list"),
+      emotionBlockEl = document.getElementById("emotion-block");
+
+    function renderQuestion() {
+      quizEl.innerHTML = "";
+      const q = questions[currentQuestion];
+      const box = document.createElement("div");
+      box.className = "question-box active";
+      box.innerHTML = `
+          <h2>Вопрос ${currentQuestion + 1} из ${questions.length}</h2>
+          <p>${q.question}</p>
+          <div class="options"></div>
+          <button class="submit-btn disabled" id="submit-btn">Ответить</button>
+      `;
+      const optionsContainer = box.querySelector(".options");
+      q.options.forEach((option, index) => {
+          const label = document.createElement("label");
+          const input = document.createElement("input");
+          input.type = "radio";
+          input.name = "answer";
+          input.value = option; // Значение — текст ответа
+          input.addEventListener("change", () => {
+              selectedOption = option; // Запоминаем ТЕКСТ ответа
+              document
+                .querySelectorAll(".options label")
+                .forEach((l) => l.classList.remove("selected"));
+              label.classList.add("selected");
+              document.getElementById("submit-btn").classList.remove("disabled");
+          });
+          label.appendChild(input);
+          label.appendChild(document.createTextNode(option));
+          optionsContainer.appendChild(label);
+      });
+      quizEl.appendChild(box);
+    }
+
+    function showResult() {
+      document.querySelector(".question-box.active").classList.remove("active");
+      setTimeout(() => {
+          quizEl.style.display = "none";
+          resultEl.style.display = "block";
+          const percent = Math.round((score / questions.length) * 100);
+          let imgSrc = "";
+          if (percent <= 30) imgSrc = "images/Evil_Fluttershy.png";
+          else if (percent <= 60) imgSrc = "images/Sad_Fluttershy.png";
+          else if (percent <= 80) imgSrc = "images/Smile_Fluttershy.png";
+          else imgSrc = "images/SmileX2_Fluttershy.png";
+          emotionBlockEl.innerHTML = `<img src="${imgSrc}" alt="Эмоция Флаттершай" style="width:${imgSrc.includes(
+              "SmileX2"
+          ) ? "180" : "150"}px;">`;
+          resultEl.classList.add("show");
+      }, 600);
+      scorePercentEl.textContent = Math.round((score / questions.length) * 100);
+      const percent = scorePercentEl.textContent;
+      if (percent <= 30) finalMessageEl.textContent = "😔 Плохо";
+      else if (percent <= 60) finalMessageEl.textContent = "😐 Удовлетворительно";
+      else if (percent <= 80) finalMessageEl.textContent = "😃 Хорошо";
+      else finalMessageEl.textContent = "🔥 Отлично";
+      questions.forEach((q, i) => {
+          const li = document.createElement("li");
+          li.className = "summary-item";
+          const userAnswerText = userAnswers[i];
+          const correctAnswerText = q.correctAnswerText;
+          if (userAnswerText === correctAnswerText) {
+              li.classList.add("correct");
+              li.innerHTML = `<strong>Вопрос ${i + 1}:</strong> ${q.question}<br>
+                             Ваш ответ (верно): <span style="color:#4CAF50;">${userAnswerText}</span>`;
+          } else {
+              li.classList.add("wrong");
+              li.innerHTML = `<strong>Вопрос ${i + 1}:</strong> ${q.question}<br>
+                             Ваш ответ (неверно): <span style="color:#f44336;">${userAnswerText}</span><br>
+                             Верный ответ был бы: <span style="color:#4CAF50;">${correctAnswerText}</span>`;
+          }
+          summaryListEl.appendChild(li);
+      });
+    }
+
+    function nextQuestion() {
+      currentQuestion++;
+      selectedOption = null;
+      if (currentQuestion < questions.length) {
+         document.querySelector(".question-box.active").classList.remove("active");
+         setTimeout(renderQuestion, 600);
+         setTimeout(() => document.getElementById("submit-btn").classList.add("disabled"), 650);
+         setTimeout(() => document.querySelectorAll(".options label").forEach(l => l.classList.remove('selected')), 650);
+      } else {
+         showResult();
+      }
+    }
+
+    renderQuestion();
+
+     quizEl.addEventListener("click", (e) => {
+       if (e.target && e.target.id === "submit-btn" && !e.target.classList.contains("disabled")) {
+           if (selectedOption !== null) {
+               userAnswers.push(selectedOption);
+               const q = questions[currentQuestion];
+               if (selectedOption === q.correctAnswerText) {
+                   score++;
+               }
+               nextQuestion();
+           }
+       }
+     });
+</script>
+</body>
+</html>
